@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>D3 Energy Dashboard</title>
+    <link rel="icon" href="data:;base64,iVBORwOKGO=" />
+    <link rel="stylesheet" href="css/style.css">
+</head>
+
+<body>
+    <!-- name / title header -->
+    <div id="dashboard-header">
+        <input id="header-name" type="text" value="Our World in Data Energy Dashboard" />
+        <input id="header-title" type="text" value="Dhriti Gada         Data from Our World in Data" />
+    </div>
+
+    <!-- dashboard tabs -->
+    <ul class="tabs">
+        <li data-tab="tab-all" class="active">All Visualizations</li>
+        <li data-tab="tab1">Vis 1 – Total by Type</li>
+        <li data-tab="tab2">Vis 2 – By Type (Total)</li>
+        <li data-tab="tab25">Vis 2.5 – By Type (Per Capita)</li>
+        <li data-tab="tab3">Vis 3 – Scatter</li>
+        <li data-tab="tab4">Map (Total)</li>
+        <li data-tab="tab5">Map (Per Capita)</li>
+    </ul>
+
+    <!-- All Visualizations: dashboard overview -->
+    <div id="tab-all" class="tabcontent">
+        <h2>Energy Dashboard Overview</h2>
+        <div id="dashboard-controls">
+            <label for="dashboard-energy-select">Energy Type:</label>
+            <select id="dashboard-energy-select"></select>
+            <div id="dashboard-legend"></div>
+        </div>
+        <div class="dashboard-grid">
+            <div class="dashboard-item">
+                <h3>Total Energy Usage by Country</h3>
+                <div id="vis1-container-mini"></div>
+            </div>
+            <div class="dashboard-item">
+                <h3>Energy Usage by Type (Total)</h3>
+                <div id="vis2-container-mini"></div>
+            </div>
+            <div class="dashboard-item">
+                <h3>Energy Usage by Type (Per Capita)</h3>
+                <div id="vis25-container-mini"></div>
+            </div>
+            <div class="dashboard-item">
+                <h3>Total vs Per-Capita Energy</h3>
+                <div id="vis3-container-mini"></div>
+            </div>
+            <div class="dashboard-item">
+                <h3>Total Energy Map</h3>
+                <div id="map2-mini"></div>
+            </div>
+            <div class="dashboard-item">
+                <h3>Per Capita Energy Map</h3>
+                <div id="map-mini"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Vis 1: stacked bar chart of total energy -->
+    <div id="tab1" class="tabcontent" style="display:none;">
+        <h2>Total Energy Usage by Country (TWh) – broken down by type</h2>
+        <div id="vis1-container"></div>
+    </div>
+
+    <!-- Vis 2: single-type bar chart (total TWh) -->
+    <div id="tab2" class="tabcontent" style="display:none;">
+        <h2>Energy Usage by Type (Total TWh)</h2>
+        <div id="controls3">
+            <label for="energy-select3">Energy Type:</label>
+            <select id="energy-select3"></select>
+        </div>
+        <div id="vis2-container"></div>
+    </div>
+
+    <!-- Vis 2.5: single-type bar chart (per capita) -->
+    <div id="tab25" class="tabcontent" style="display:none;">
+        <h2>Energy Usage by Type (Per Capita, kWh/capita)</h2>
+        <div id="controls25">
+            <label for="energy-select25">Energy Type:</label>
+            <select id="energy-select25"></select>
+        </div>
+        <div id="vis25-container"></div>
+    </div>
+
+    <!-- Vis 3: scatterplot -->
+    <div id="tab3" class="tabcontent" style="display:none;">
+        <h2>Total Energy vs Per-Capita Energy</h2>
+        <div id="vis3-container"></div>
+    </div>
+
+    <!-- Map tabs -->
+    <div id="tab4" class="tabcontent" style="display:none;">
+        <h2>Maps (Total + Per Capita by Type)</h2>
+        <div id="controls2">
+            <label for="energy-select2">Mode:</label>
+            <select id="energy-select2"></select>
+        </div>
+        <div id="map2"></div>
+    </div>
+    <div id="tab5" class="tabcontent" style="display:none;">
+        <h1>Energy Use Per Capita</h1>
+        <div id="controls">
+            <label for="energy-select">Energy type:</label>
+            <select id="energy-select"></select>
+        </div>
+        <div id="map"></div>
+    </div>
+
+    <svg height="5" width="5" xmlns="http://www.w3.org/2000/svg" version="1.1">
+        <defs>
+            <pattern id="lightstripe" patternUnits="userSpaceOnUse" width="5" height="5">
+                <image
+                    xlink:href="data:image/svg+xml;base64,PHN2ZyB4bWxucz0naHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmcnIHdpZHRoPSc1JyBoZWlnaHQ9JzUnPgogIDxyZWN0IHdpZHRoPSc1JyBoZWlnaHQ9JzUnIGZpbGw9J3doaXRlJy8+CiAgPHBhdGggZD0nTTAgNUw1IDBaTTYgNEw0IDZaTS0xIDFMMSAtMVonIHN0cm9rZT0nIzg4OCcgc3Ryb2tlLXdpZHRoPScxJy8+Cjwvc3ZnPg=="
+                    x="0" y="0" width="5" height="5"> </image>
+            </pattern>
+        </defs>
+    </svg>
+
+    <div id="tooltip"></div>
+
+    <script src="js/d3.v6.min.js"></script>
+    <script src="js/topojson.v3.js"></script>
+    <script src="js/choroplethMap.js"></script>
+    <script src="js/barchart.js"></script>
+    <script src="js/main.js"></script>
+
+    <script>
+        // simple tab handler
+        const tabs = document.querySelectorAll('.tabs li');
+        tabs.forEach(li => {
+            li.addEventListener('click', () => {
+                const tab = li.getAttribute('data-tab');
+                tabs.forEach(x => x.classList.remove('active'));
+                li.classList.add('active');
+                document.querySelectorAll('.tabcontent').forEach(tc => tc.style.display = 'none');
+                document.getElementById(tab).style.display = 'block';
+            });
+        });
+    </script>
+</body>
+
+</html>

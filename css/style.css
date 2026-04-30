@@ -1,0 +1,220 @@
+/* ── Base ── */
+* {
+  font-family: 'Courier New', Courier, monospace;
+  box-sizing: border-box;
+}
+
+body {
+  background: #222;
+  color: #eee;
+  padding: 20px 40px;
+  margin: 0;
+}
+
+/* ── Name / Title header ── */
+#dashboard-header {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: 18px;
+}
+
+#header-name {
+  font-size: 1.5rem;
+  font-weight: 700;
+  background: transparent;
+  border: none;
+  border-bottom: 1px solid #555;
+  color: #fff;
+  outline: none;
+  width: 100%;
+  padding: 4px 2px;
+  letter-spacing: 0.02em;
+}
+
+#header-title {
+  font-size: 1rem;
+  background: transparent;
+  border: none;
+  border-bottom: 1px dashed #444;
+  color: #aaa;
+  outline: none;
+  width: 100%;
+  padding: 2px 2px;
+  letter-spacing: 0.04em;
+}
+
+#header-name::placeholder { color: #555; }
+#header-title::placeholder { color: #444; }
+
+#header-name:focus { border-bottom-color: #888; color: #fff; }
+#header-title:focus { border-bottom-color: #777; color: #ccc; }
+
+/* ── Tabs ── */
+.tabs { list-style: none; padding: 0; display: flex; flex-wrap: wrap; border-bottom: 1px solid #555; margin: 0 0 0 0; }
+.tabs li { padding: 8px 12px; cursor: pointer; background: #333; color: #eee; margin-right: 2px; font-size: 0.85rem; }
+.tabs li.active { background: #555; font-weight: 600; }
+.tabs li:hover:not(.active) { background: #3a3a3a; }
+
+.tabcontent { padding: 10px; }
+
+/* ── Dashboard Grid ── */
+.dashboard-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 15px;
+  grid-auto-rows: 390px;
+  align-items: stretch;
+  margin-bottom: 20px;
+}
+
+#dashboard-controls {
+  margin-bottom: 15px;
+  padding: 10px;
+  background: #2a2a2a;
+  border: 1px solid #444;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+#dashboard-controls label {
+  font-weight: 600;
+  margin: 0;
+}
+
+#dashboard-controls select {
+  padding: 4px 8px;
+  font-size: 0.95rem;
+}
+
+#dashboard-legend {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  align-items: center;
+  margin-left: auto;
+  order: 3;
+}
+
+.color-legend-item {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 0.75rem;
+  color: #eee;
+}
+
+.color-legend-swatch {
+  width: 10px;
+  height: 10px;
+  border-radius: 1px;
+  border: 1px solid #666;
+  flex-shrink: 0;
+}
+
+.dashboard-item {
+  background: #2a2a2a;
+  border: 1px solid #444;
+  padding: 10px;
+  border-radius: 4px;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.dashboard-item h3 {
+  flex: 0 0 auto;
+  margin: 0 0 8px 0;
+  font-size: 0.95rem;
+  color: #fff;
+  border-bottom: 1px solid #555;
+  padding-bottom: 5px;
+}
+
+.dashboard-item select {
+  font-size: 0.8rem;
+  padding: 2px 4px;
+}
+
+#vis1-container-mini, #vis2-container-mini, #vis25-container-mini,
+#vis3-container-mini, #map2-mini, #map-mini {
+  flex: 1 1 auto;
+  min-height: 0;
+  width: 100%;
+}
+
+#vis1-container-mini, #vis2-container-mini, #vis25-container-mini, 
+#vis3-container-mini, #map2-mini, #map-mini {
+  overflow: hidden;
+  max-height: none;
+}
+
+#vis1-container-mini > div,
+#vis2-container-mini > div,
+#vis25-container-mini > div {
+  max-height: none !important;
+  height: 100% !important;
+}
+
+#vis1-container-mini svg,
+#vis2-container-mini svg,
+#vis25-container-mini svg,
+#vis3-container-mini svg,
+#map2-mini svg,
+#map-mini svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+  max-width: none;
+}
+
+/* ── Controls ── */
+#controls, #controls2, #controls3, #controls25 { margin-bottom: 10px; }
+#controls label, #controls2 label, #controls3 label, #controls25 label {
+  margin-right: 5px;
+  font-weight: 600;
+}
+
+/* ── Selects ── */
+select {
+  background: #555;
+  color: #eee;
+  border: 1px solid #888;
+  padding: 2px 4px;
+  font-family: 'Courier New', Courier, monospace;
+}
+
+/* ── Tooltip ── */
+#tooltip {
+  position: absolute;
+  display: none;
+  background: #444;
+  color: #fff;
+  box-shadow: 3px 3px 3px 0px rgb(0 0 0 / 0.5);
+  border: 1px solid #666;
+  font-size: 12px;
+  padding: 8px;
+  min-width: 160px;
+  pointer-events: none;
+  font-family: 'Courier New', Courier, monospace;
+}
+
+/* ── Maps ── */
+#map { max-width: 900px; margin: auto; }
+#map svg, #map2 svg { background: #333; }
+
+/* ── Country hover ── */
+.country:hover { stroke: #fff; }
+
+/* ── Legend text ── */
+.legend-title { font-size: .7rem; font-weight: 600; fill: #eee; }
+.legend-label  { font-size: .7rem; fill: #eee; }
+
+/* ── SVG text (axes, labels) ── */
+svg text {
+  font-family: 'Courier New', Courier, monospace;
+}
