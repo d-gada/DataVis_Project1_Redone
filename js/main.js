@@ -217,7 +217,7 @@ Promise.all([
   const vis1MiniChart = new Barchart({
     parentElement:    '#vis1-container-mini',
     containerWidth:   vis1MiniSize.width,
-    containerHeight:  vis1MiniSize.height,
+    containerHeight:  vis1Data.length * 20 + 60,
     margin:           { top: 20, right: 20, bottom: 20, left: 80 },
     isStacked:        true,
     colorScale:       globalColorScale,
@@ -225,35 +225,35 @@ Promise.all([
     energyTypes:      energyTypesTotal_filtered,
     unit:             'TWh',
     showLegend:       false
-  }, vis1Data.slice(0, 10)); // Only top 10 countries
+  }, vis1Data);
 
   // Vis 2 Mini - Single-type bar chart
   const vis2MiniSize = getMiniChartSize('#vis2-container-mini');
   const vis2MiniChart = new Barchart({
     parentElement:    '#vis2-container-mini',
     containerWidth:   vis2MiniSize.width,
-    containerHeight:  vis2MiniSize.height,
+    containerHeight:  vis2Data.length * 20 + 60,
     margin:           { top: 20, right: 20, bottom: 20, left: 80 },
     isStacked:        false,
     colorScale:       globalColorScale,
     colorMap:         undefined,
     energyTypes:      energyTypesTotal_filtered,
     unit:             'TWh'
-  }, vis2Data.slice(0, 10)); // Only top 10 countries
+  }, vis2Data);
 
   // Vis 2.5 Mini - Per-capita bar chart
   const vis25MiniSize = getMiniChartSize('#vis25-container-mini');
   const vis25MiniChart = new Barchart({
     parentElement:    '#vis25-container-mini',
     containerWidth:   vis25MiniSize.width,
-    containerHeight:  vis25MiniSize.height,
+    containerHeight:  vis25Data.length * 20 + 60,
     margin:           { top: 20, right: 20, bottom: 20, left: 80 },
     isStacked:        false,
     colorScale:       globalColorScale,
     colorMap:         undefined,
     energyTypes:      energyTypesPC_filtered,
     unit:             'kWh/capita'
-  }, vis25Data.slice(0, 10)); // Only top 10 countries
+  }, vis25Data);
 
   // Vis 3 Mini - Scatterplot
   const vis3MiniSize = getMiniChartSize('#vis3-container-mini');

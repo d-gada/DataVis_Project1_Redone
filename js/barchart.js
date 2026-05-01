@@ -21,14 +21,39 @@ class Barchart {
 
     const wrapper = d3.select(vis.config.parentElement)
       .append('div')
+      .attr('class', 'chart-shell')
       .style('width', '100%')
       .style('height', '100%')
-      .style('overflow', 'hidden');
+      .style('overflow', 'auto')
+      .style('display', 'flex')
+      .style('flex-direction', 'column');
+
+    // expose wrapper DOM node for scroll-syncing the fixed axis
+    vis.wrapperNode = wrapper.node();
+    if (vis.wrapperNode) {
+      vis.wrapperNode.addEventListener('scroll', () => {
+        // translate the fixed axis horizontally to match the scrollLeft
+        if (vis.fixedXAxisG) {
+          const sx = vis.wrapperNode.scrollLeft || 0;
+          vis.fixedXAxisG.attr('transform', `translate(${vis.config.margin.left - sx},20)`);
+        }
+      });
+    }
 
     vis.svg = wrapper.append('svg')
       .attr('width',  vis.config.containerWidth)
       .attr('height', vis.config.containerHeight)
       .style('background', '#333');
+
+    // fixed bottom x-axis SVG (sticky at bottom of the wrapper)
+    vis.fixedAxisSvg = wrapper.append('svg')
+      .attr('class', 'x-axis-fixed-svg')
+      .attr('width', vis.config.containerWidth)
+      .attr('height', 40)
+      .style('background', 'transparent');
+
+    vis.fixedXAxisG = vis.fixedAxisSvg.append('g')
+      .attr('transform', `translate(${vis.config.margin.left},20)`);
 
     vis.chart = vis.svg.append('g')
       .attr('transform', `translate(${vis.config.margin.left},${vis.config.margin.top})`);
@@ -72,7 +97,8 @@ class Barchart {
 
     vis.xAxisG = vis.chart.append('g')
       .attr('class', 'x-axis')
-      .attr('transform', `translate(0,${vis.height})`);
+      .attr('transform', `translate(0,${vis.height})`)
+      .attr('display', 'none'); // hidden: we use the fixed bottom axis instead
 
     vis.xAxisTopG = vis.chart.append('g')
       .attr('class', 'x-axis-top')
@@ -123,12 +149,16 @@ class Barchart {
     if (vis.config.isStacked) {
       vis.stack = d3.stack().keys(vis.config.energyTypes);
       vis.stackedData = vis.stack(vis.data);
-      vis.xScale.domain([0, d3.max(vis.data, d =>
+      const maxValue = d3.max(vis.data, d =>
         vis.config.energyTypes.reduce((acc, k) => acc + (+d[k] || 0), 0)
-      )]);
+      ) || 1;
+      vis.xScale.domain([0, maxValue]);
     } else {
-      vis.xScale.domain([0, d3.max(vis.data, d => +d[vis.selectedType] || 0)]);
+      const maxValue = d3.max(vis.data, d => +d[vis.selectedType] || 0) || 1;
+      vis.xScale.domain([0, maxValue]);
     }
+
+    
 
     vis.data.sort((a, b) => {
       if (vis.config.isStacked) {
@@ -200,10 +230,12 @@ class Barchart {
 
     const tickFmt = d => d >= 1000 ? `${(d/1000).toFixed(0)}k` : d;
 
-    vis.xAxisG.call(d3.axisBottom(vis.xScale).ticks(6).tickFormat(tickFmt));
-    vis.xAxisG.selectAll('text').style('fill', '#eee');
-    vis.xAxisG.selectAll('line, path').style('stroke', '#888');
+    // render the fixed bottom axis (sticky) and style it
+    vis.fixedXAxisG.call(d3.axisBottom(vis.xScale).ticks(6).tickFormat(tickFmt));
+    vis.fixedXAxisG.selectAll('text').style('fill', '#eee');
+    vis.fixedXAxisG.selectAll('line, path').style('stroke', '#888');
 
+    // keep the top axis for reference inside the chart
     vis.xAxisTopG.call(d3.axisTop(vis.xScale).ticks(6).tickFormat(tickFmt));
     vis.xAxisTopG.selectAll('text').style('fill', '#eee');
     vis.xAxisTopG.selectAll('line, path').style('stroke', '#888');
@@ -247,6 +279,7 @@ class Scatterplot {
       containerHeight: _config.containerHeight || 550,
       margin: _config.margin || { top: 30, right: 40, bottom: 60, left: 80 }
     };
+    
 
     const pcMap = {};
     _perCapitaData.forEach(d => { pcMap[d.Entity] = d; });
@@ -275,11 +308,21 @@ class Scatterplot {
     vis.width  = vis.config.containerWidth  - vis.config.margin.left - vis.config.margin.right;
     vis.height = vis.config.containerHeight - vis.config.margin.top  - vis.config.margin.bottom;
 
-    vis.svg = d3.select(vis.config.parentElement)
-      .append('svg')
+    const wrapper = d3.select(vis.config.parentElement)
+      .append('div')
+      .attr('class', 'chart-shell')
+      .style('width', '100%')
+      .style('height', '100%')
+      .style('overflow', 'auto')
+      .style('display', 'flex')
+      .style('flex-direction', 'column');
+
+    vis.svg = wrapper.append('svg')
         .attr('width',  vis.config.containerWidth)
         .attr('height', vis.config.containerHeight)
         .style('background', '#333');
+
+    // scatterplot uses internal axes (no fixed/sticky bottom axis)
 
     vis.chart = vis.svg.append('g')
       .attr('transform', `translate(${vis.config.margin.left},${vis.config.margin.top})`);
@@ -348,6 +391,7 @@ class Scatterplot {
         .on('mouseout', () => vis.tooltip.style('display', 'none'));
 
     const fmt = d3.format('~s');
+    // render bottom axis inside the chart for a normal scatterplot appearance
     vis.xAxisG.call(d3.axisBottom(vis.xScale).ticks(6).tickFormat(fmt));
     vis.xAxisG.selectAll('text').style('fill', '#eee');
     vis.xAxisG.selectAll('line, path').style('stroke', '#888');

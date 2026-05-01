@@ -123,8 +123,67 @@ body {
   display: flex;
   flex-direction: column;
   min-height: 0;
-  overflow: hidden;
+  overflow: auto;
 }
+
+.chart-shell {
+  min-height: 0;
+}
+
+.chart-axis-controls {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 0 6px;
+  margin-bottom: 6px;
+  background: #2a2a2a;
+  border-bottom: 1px solid #444;
+}
+
+.chart-axis-controls label,
+.chart-axis-controls .axis-zoom-value {
+  font-size: 0.72rem;
+  color: #ddd;
+}
+
+.chart-axis-controls input[type='range'] {
+  width: 110px;
+}
+
+.chart-axis-controls button {
+  background: #555;
+  color: #eee;
+  border: 1px solid #777;
+  padding: 2px 6px;
+  font-family: 'Courier New', Courier, monospace;
+  font-size: 0.7rem;
+  cursor: pointer;
+}
+
+.chart-axis-controls button:hover {
+  background: #666;
+}
+
+.chart-axis-controls--scatter {
+  gap: 8px;
+}
+
+/* fixed bottom axis SVG styling */
+.x-axis-fixed-svg {
+  position: sticky;
+  bottom: 0;
+  z-index: 4;
+  background: linear-gradient(#2a2a2a, #2a2a2a);
+  border-top: 1px solid #444;
+  width: 100%;
+}
+
+.x-axis-fixed-svg .domain { stroke: #888; }
+.x-axis-fixed-svg text { fill: #eee; font-family: 'Courier New', Courier, monospace; }
 
 .dashboard-item h3 {
   flex: 0 0 auto;
@@ -149,15 +208,19 @@ body {
 
 #vis1-container-mini, #vis2-container-mini, #vis25-container-mini, 
 #vis3-container-mini, #map2-mini, #map-mini {
-  overflow: hidden;
-  max-height: none;
+  overflow: auto;
+  max-height: 100%;
+}
+
+.dashboard-item > div {
+  min-height: 0;
 }
 
 #vis1-container-mini > div,
 #vis2-container-mini > div,
 #vis25-container-mini > div {
   max-height: none !important;
-  height: 100% !important;
+  height: auto !important;
 }
 
 #vis1-container-mini svg,
@@ -168,8 +231,13 @@ body {
 #map-mini svg {
   display: block;
   width: 100%;
-  height: 100%;
+  height: auto;
   max-width: none;
+}
+
+#vis1-container, #vis2-container, #vis25-container, #vis3-container, #map2, #map {
+  max-height: calc(100vh - 220px);
+  overflow: auto;
 }
 
 /* ── Controls ── */
