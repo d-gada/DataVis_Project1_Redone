@@ -11,7 +11,12 @@ class Barchart {
       showLegend: _config.showLegend !== false  // Default to true
     };
     this.data = _data;
+    this.selectedCountries = new Set(); // Track current selection
     this.initVis();
+    // Register this chart with the global SelectionManager
+    if (window.SelectionManager) {
+      window.SelectionManager.registerChart(this);
+    }
   }
 
   initVis() {
@@ -54,6 +59,22 @@ class Barchart {
 
     vis.fixedXAxisG = vis.fixedAxisSvg.append('g')
       .attr('transform', `translate(${vis.config.margin.left},20)`);
+
+    // X-axis brush for drag-to-zoom (on the fixed axis area)
+    vis.xBrush = d3.brushX()
+      .extent([[0, 0], [vis.width, 40]])
+      .on('end', event => vis.xZoomed(event));
+
+    vis.fixedAxisSvg.append('g')
+      .attr('class', 'x-brush')
+      .attr('transform', `translate(${vis.config.margin.left},0)`) // align with axis
+      .call(vis.xBrush);
+
+    // double-click fixed axis to reset zoom (also attach to visible SVG and wrapper for reliability)
+    vis.fixedAxisSvg.on('dblclick', () => vis.resetZoom && vis.resetZoom());
+    // ensure dblclick works when user clicks the chart area or wrapper
+    wrapper.on('dblclick', () => vis.resetZoom && vis.resetZoom());
+    vis.svg.on('dblclick', () => vis.resetZoom && vis.resetZoom());
 
     vis.chart = vis.svg.append('g')
       .attr('transform', `translate(${vis.config.margin.left},${vis.config.margin.top})`);
@@ -104,6 +125,19 @@ class Barchart {
       .attr('class', 'x-axis-top')
       .attr('transform', 'translate(0,0)');
 
+    // Top-axis brush for drag-to-zoom (aligns over the top axis area)
+    vis.topXBrush = d3.brushX()
+      .extent([[0, 0], [vis.width, 40]])
+      .on('end', event => vis.xTopZoomed(event));
+
+    vis.chart.append('g')
+      .attr('class', 'x-top-brush')
+      .attr('transform', `translate(0, -20)`) // position over the top axis
+      .call(vis.topXBrush);
+
+    // double-click top axis to reset zoom
+    vis.xAxisTopG.on('dblclick', () => vis.resetZoom && vis.resetZoom());
+
     vis.yAxisG = vis.chart.append('g')
       .attr('class', 'y-axis');
 
@@ -153,9 +187,12 @@ class Barchart {
         vis.config.energyTypes.reduce((acc, k) => acc + (+d[k] || 0), 0)
       ) || 1;
       vis.xScale.domain([0, maxValue]);
+      // save the full domain for reset
+      vis.fullXDomain = vis.xScale.domain().slice();
     } else {
       const maxValue = d3.max(vis.data, d => +d[vis.selectedType] || 0) || 1;
       vis.xScale.domain([0, maxValue]);
+      vis.fullXDomain = vis.xScale.domain().slice();
     }
 
     
@@ -190,14 +227,36 @@ class Barchart {
           .attr('x',      d => vis.xScale(d[0]))
           .attr('width',  d => Math.max(0, vis.xScale(d[1]) - vis.xScale(d[0])))
           .attr('height', vis.yScale.bandwidth())
-          .attr('opacity', 1)
+          .attr('opacity', d => vis.selectedCountries.size === 0 ? 1 : (vis.selectedCountries.has(d.data.Entity) ? 1 : 0.15))
+          .on('click', (event, d) => {
+            event.stopPropagation();
+            const countryName = d.data.Entity;
+            const newSelection = new Set();
+            if (vis.selectedCountries.has(countryName)) {
+              // If already selected, deselect it
+              newSelection.clear();
+            } else {
+              // Select only this country
+              newSelection.add(countryName);
+            }
+            if (window.SelectionManager) {
+              window.SelectionManager.setSelection(newSelection);
+            }
+          })
           .on('mouseover', (event, d) => {
-            const segVal = (d[1] - d[0]).toFixed(2);
+            // Build a detailed breakdown for the country (all energy types)
+            const row = d.data;
+            const types = vis.config.energyTypes || [];
+            const rowsHtml = types.map(t => {
+              const v = (+row[t] || 0).toFixed(2);
+              return `<div style="margin:2px 0;"><strong>${t}:</strong> ${v} ${vis.config.unit}</div>`;
+            }).join('');
+            const total = types.reduce((s, t) => s + (+row[t] || 0), 0).toFixed(2);
             vis.tooltip
               .style('display', 'block')
               .style('left', (event.pageX + 10) + 'px')
               .style('top',  (event.pageY - 28) + 'px')
-              .html(`<strong>${d.data.Entity}</strong><br/>${d.key}: ${segVal} ${vis.config.unit}`);
+              .html(`<strong>${row.Entity}</strong><br/><div style="margin-top:6px;">${rowsHtml}</div><div style="margin-top:6px;"><strong>Total:</strong> ${total} ${vis.config.unit}</div>`);
           })
           .on('mousemove', event => {
             vis.tooltip.style('left', (event.pageX + 10) + 'px').style('top', (event.pageY - 28) + 'px');
@@ -214,7 +273,22 @@ class Barchart {
           .attr('width',  d => vis.xScale(+d[vis.selectedType] || 0))
           .attr('height', vis.yScale.bandwidth())
           .attr('fill',   vis.getColor(vis.selectedType))
-          .attr('opacity', 1)
+          .attr('opacity', d => vis.selectedCountries.size === 0 ? 1 : (vis.selectedCountries.has(d.Entity) ? 1 : 0.15))
+          .on('click', (event, d) => {
+            event.stopPropagation();
+            const countryName = d.Entity;
+            const newSelection = new Set();
+            if (vis.selectedCountries.has(countryName)) {
+              // If already selected, deselect it
+              newSelection.clear();
+            } else {
+              // Select only this country
+              newSelection.add(countryName);
+            }
+            if (window.SelectionManager) {
+              window.SelectionManager.setSelection(newSelection);
+            }
+          })
           .on('mouseover', (event, d) => {
             vis.tooltip
               .style('display', 'block')
@@ -248,7 +322,13 @@ class Barchart {
   brushed(event) {
     let vis = this;
     if (!event.selection) {
+      // Clear selection when brush is cleared
+      vis.selectedCountries.clear();
       vis.chart.selectAll('rect.bar, .layer rect').attr('opacity', 1);
+      // Notify SelectionManager
+      if (window.SelectionManager) {
+        window.SelectionManager.setSelection(new Set());
+      }
       return;
     }
     const [y0, y1] = event.selection;
@@ -258,6 +338,8 @@ class Barchart {
         return mid >= y0 && mid <= y1;
       })
     );
+    vis.selectedCountries = selectedCountries;
+    
     if (vis.config.isStacked) {
       vis.chart.selectAll('.layer rect')
         .attr('opacity', d => selectedCountries.has(d.data.Entity) ? 1 : 0.15);
@@ -266,6 +348,84 @@ class Barchart {
         .attr('opacity', d => selectedCountries.has(d.Entity) ? 1 : 0.15);
     }
     console.log('Brushed countries:', [...selectedCountries]);
+    
+    // Notify SelectionManager of the selection
+    if (window.SelectionManager) {
+      window.SelectionManager.setSelection(selectedCountries);
+    }
+  }
+
+  // Method to apply external selection from SelectionManager
+  applySelection(selectedCountries) {
+    let vis = this;
+    vis.selectedCountries = selectedCountries;
+    if (selectedCountries.size === 0) {
+      vis.chart.selectAll('rect.bar, .layer rect').attr('opacity', 1);
+    } else {
+      if (vis.config.isStacked) {
+        vis.chart.selectAll('.layer rect')
+          .attr('opacity', d => selectedCountries.has(d.data.Entity) ? 1 : 0.15);
+      } else {
+        vis.chart.selectAll('rect.bar')
+          .attr('opacity', d => selectedCountries.has(d.Entity) ? 1 : 0.15);
+      }
+    }
+  }
+
+  // Handle x-axis brush end to perform zoom
+  xZoomed(event) {
+    const vis = this;
+    if (!event.selection || event.selection.length === 0) {
+      return;
+    }
+    const [x0, x1] = event.selection; // coordinates relative to axis group
+    // compute new domain (invert using current scale)
+    const d0 = vis.xScale.invert(x0);
+    const d1 = vis.xScale.invert(x1);
+    if (d0 == null || d1 == null) return;
+    vis.xScale.domain([Math.min(d0, d1), Math.max(d0, d1)]);
+    // re-render chart with new x domain
+    vis.renderVis();
+    // clear the brush selection visually
+    vis.fixedAxisSvg.select('.x-brush').call(vis.xBrush.move, null);
+  }
+
+  // Reset to full x-domain
+  resetZoom() {
+    const vis = this;
+    if (vis.fullXDomain) {
+      vis.xScale.domain(vis.fullXDomain.slice());
+      vis.renderVis();
+    }
+  }
+
+  // clear brush visuals for both top and bottom brushes
+  _clearBrushVisuals() {
+    const vis = this;
+    try {
+      if (vis.fixedAxisSvg) vis.fixedAxisSvg.select('.x-brush').call(vis.xBrush.move, null);
+    } catch (e) {}
+    try {
+      if (vis.chart) vis.chart.select('.x-top-brush').call(vis.topXBrush.move, null);
+    } catch (e) {}
+  }
+
+  // Handle top-axis brush end (same behavior as bottom brush)
+  xTopZoomed(event) {
+    const vis = this;
+    if (!event.selection || event.selection.length === 0) {
+      return;
+    }
+    const [x0, x1] = event.selection; // coordinates relative to chart group (we positioned brush accordingly)
+    const d0 = vis.xScale.invert(x0);
+    const d1 = vis.xScale.invert(x1);
+    if (d0 == null || d1 == null) return;
+    vis.xScale.domain([Math.min(d0, d1), Math.max(d0, d1)]);
+    vis.renderVis();
+    // clear the top brush visually
+    vis.chart.select('.x-top-brush').call(vis.topXBrush.move, null);
+    // also clear bottom brush visuals to keep UI consistent
+    vis.fixedAxisSvg.select('.x-brush').call(vis.xBrush.move, null);
   }
 }
 
@@ -300,7 +460,12 @@ class Scatterplot {
       return { Entity: d.Entity, totalTWh, totalPC };
     }).filter(Boolean);
 
+    this.selectedCountries = new Set(); // Track current selection
     this.initVis();
+    // Register this chart with the global SelectionManager
+    if (window.SelectionManager) {
+      window.SelectionManager.registerChart(this);
+    }
   }
 
   initVis() {
@@ -375,7 +540,22 @@ class Scatterplot {
         .attr('cy', d => vis.yScale(d.totalPC))
         .attr('r', 5)
         .attr('fill', '#4e9af1')
-        .attr('opacity', 0.8)
+        .attr('opacity', d => vis.selectedCountries.size === 0 ? 0.8 : (vis.selectedCountries.has(d.Entity) ? 1 : 0.1))
+        .on('click', (event, d) => {
+          event.stopPropagation();
+          const countryName = d.Entity;
+          const newSelection = new Set();
+          if (vis.selectedCountries.has(countryName)) {
+            // If already selected, deselect it
+            newSelection.clear();
+          } else {
+            // Select only this country
+            newSelection.add(countryName);
+          }
+          if (window.SelectionManager) {
+            window.SelectionManager.setSelection(newSelection);
+          }
+        })
         .on('mouseover', (event, d) => {
           vis.tooltip
             .style('display', 'block')
@@ -404,14 +584,46 @@ class Scatterplot {
   brushed(event) {
     let vis = this;
     if (!event.selection) {
+      vis.selectedCountries.clear();
       vis.chart.selectAll('.dot').attr('opacity', 0.8);
+      // Notify SelectionManager
+      if (window.SelectionManager) {
+        window.SelectionManager.setSelection(new Set());
+      }
       return;
     }
     const [[x0, y0], [x1, y1]] = event.selection;
+    const selectedCountries = new Set();
+    
     vis.chart.selectAll('.dot').attr('opacity', d => {
       const cx = vis.xScale(d.totalTWh);
       const cy = vis.yScale(d.totalPC);
-      return (cx >= x0 && cx <= x1 && cy >= y0 && cy <= y1) ? 1 : 0.1;
+      const inBrush = (cx >= x0 && cx <= x1 && cy >= y0 && cy <= y1);
+      if (inBrush) {
+        selectedCountries.add(d.Entity);
+      }
+      return inBrush ? 1 : 0.1;
     });
+    
+    vis.selectedCountries = selectedCountries;
+    console.log('Scatterplot brushed countries:', [...selectedCountries]);
+    
+    // Notify SelectionManager of the selection
+    if (window.SelectionManager) {
+      window.SelectionManager.setSelection(selectedCountries);
+    }
+  }
+
+  // Method to apply external selection from SelectionManager
+  applySelection(selectedCountries) {
+    let vis = this;
+    vis.selectedCountries = selectedCountries;
+    if (selectedCountries.size === 0) {
+      vis.chart.selectAll('.dot').attr('opacity', 0.8);
+    } else {
+      vis.chart.selectAll('.dot').attr('opacity', d => 
+        selectedCountries.has(d.Entity) ? 1 : 0.1
+      );
+    }
   }
 }

@@ -1,3 +1,38 @@
+// ── Global Selection Manager for Cross-Chart Interactions ────────────────────
+class SelectionManager {
+  constructor() {
+    this.selectedCountries = new Set();
+    this.charts = [];
+  }
+
+  registerChart(chart) {
+    if (!this.charts.includes(chart)) {
+      this.charts.push(chart);
+      // Apply current selection to newly registered chart
+      if (this.selectedCountries.size > 0 && chart.applySelection) {
+        chart.applySelection(this.selectedCountries);
+      }
+    }
+  }
+
+  setSelection(selectedCountries) {
+    this.selectedCountries = new Set(selectedCountries);
+    // Notify all registered charts of the selection change
+    this.charts.forEach(chart => {
+      if (chart.applySelection) {
+        chart.applySelection(this.selectedCountries);
+      }
+    });
+  }
+
+  clearSelection() {
+    this.setSelection(new Set());
+  }
+}
+
+// Create global instance
+window.SelectionManager = new SelectionManager();
+
 Promise.all([
   d3.json('data/world.geojson'),
   d3.csv('data/per-capita-energy.csv'),

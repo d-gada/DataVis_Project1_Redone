@@ -29,7 +29,12 @@ class ChoroplethMap {
     this.config.unifiedTypes = _config.unifiedTypes || this.config.energyTypes;
     this.instanceId = ChoroplethMap.nextId += 1;
     this.selectedType = null;
+    this.selectedCountries = new Set(); // Track current selection
     this.initVis();
+    // Register this chart with the global SelectionManager
+    if (window.SelectionManager) {
+      window.SelectionManager.registerChart(this);
+    }
   }
 
   /**
@@ -238,9 +243,32 @@ class ChoroplethMap {
         } else {
           return 'url(#lightstripe)';
         }
+      })
+      .style('stroke', d => {
+        return vis.selectedCountries.has(d.properties.name) ? '#ffffff' : 'none';
+      })
+      .style('stroke-width', d => {
+        return vis.selectedCountries.has(d.properties.name) ? 1 : 0;
+      })
+      .style('opacity', d => {
+        return vis.selectedCountries.has(d.properties.name) ? 1 : 0.7;
       });
 
     countryPath
+      .on('click', (event, d) => {
+        event.stopPropagation();
+        const countryName = d.properties.name;
+        if (vis.selectedCountries.has(countryName)) {
+          vis.selectedCountries.delete(countryName);
+        } else {
+          vis.selectedCountries.add(countryName);
+        }
+        // Notify SelectionManager
+        if (window.SelectionManager) {
+          window.SelectionManager.setSelection(vis.selectedCountries);
+        }
+        vis._updateMapSelection();
+      })
       .on('mousemove', (event, d) => {
         const val = d.properties.energy;
         const info = val != null
@@ -280,5 +308,26 @@ class ChoroplethMap {
       .attr('stop-color', d => d.color);
 
     vis.legendRect.attr('fill', `url(#legend-gradient-${vis.instanceId})`);
+  }
+
+  _updateMapSelection() {
+    let vis = this;
+    // Re-render the map with selection highlighting
+    vis.chart.selectAll('path.country')
+      .style('stroke', d => {
+        return vis.selectedCountries.has(d.properties.name) ? '#ffffff' : 'none';
+      })
+      .style('stroke-width', d => {
+        return vis.selectedCountries.has(d.properties.name) ? 1 : 0;
+      })
+      .style('opacity', d => {
+        return vis.selectedCountries.has(d.properties.name) ? 1 : 0.7;
+      });
+  }
+
+  applySelection(selectedCountries) {
+    let vis = this;
+    vis.selectedCountries = selectedCountries;
+    vis._updateMapSelection();
   }
 }
